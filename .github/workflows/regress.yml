@@ -11,6 +11,10 @@ on:
         description: "minutes of random tests"
         default: "25"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
   SPIKE_REV: 9c190a07c6838f6392bafa4ad83acea462c7f759   # same Spike as Chipyard 1.14
   BUDGET: ${{ github.event.inputs.budget || '25' }}

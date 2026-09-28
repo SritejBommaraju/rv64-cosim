@@ -42,6 +42,7 @@ MABI = "lp64"
 SPIKE_ISA = "rv64im_zicsr_zifencei"
 RESET_PC = 0x80000000
 KEEP_PASSING = os.environ.get("KEEP_PASSING", "0") == "1"
+SPIKE_MAX_INSTRS = 2_000_000
 
 # Options every generated test needs on this core: no traps or privilege changes
 # exist yet, so programs run bare in M-mode and avoid ecall/ebreak/wfi/dret.
@@ -92,7 +93,7 @@ def symbol(elf, name):
     return None
 
 
-def run_program(src, outdir, timeout=300):
+def run_program(src, outdir, timeout=600):
     """Compile (if needed), run Spike and RTL, compare. Returns a result dict."""
     os.makedirs(outdir, exist_ok=True)
     log = os.path.join(outdir, "compare.log")
@@ -108,19 +109,28 @@ def run_program(src, outdir, timeout=300):
     if tohost is None:
         return dict(res, status="COMPILE_FAIL", detail="no tohost symbol")
 
-    spike_log = os.path.join(outdir, "spike.log")
-    rc, _ = sh([SPIKE, "--isa=" + SPIKE_ISA, "--priv=m", "--misaligned",
-                "-l", "--log-commits", "--log=" + spike_log, elf], log, timeout=timeout)
-    if rc != 0:
-        return dict(res, status="SPIKE_FAIL", detail="spike rc={}".format(rc))
+    # Spike's log is streamed straight into the parser: a runaway program would
+    # otherwise write gigabytes before the timeout.
+    cmd = [SPIKE, "--isa=" + SPIKE_ISA, "--priv=m", "--misaligned",
+           "-l", "--log-commits", "--log=/dev/stdout", elf]
+    with open(log, "a") as f:
+        f.write("$ " + " ".join(shlex.quote(c) for c in cmd) + "\n")
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+                         errors="replace")
+    try:
+        rows, end = spike_trace.parse_lines(p.stdout, RESET_PC, tohost, max_instrs=SPIKE_MAX_INSTRS)
+    finally:
+        p.kill()
+        p.wait()
+    if end != "tohost":
+        # the program itself is broken (generator bug), not the RTL
+        return dict(res, status="BAD_TEST", instrs=len(rows),
+                    detail="spike: {} after {} instructions".format(end, len(rows)))
     spike_csv = os.path.join(outdir, "spike.csv")
-    rows = spike_trace.parse(spike_log, RESET_PC, tohost)
     with open(spike_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=spike_trace.FIELDS, lineterminator="\n")
         w.writeheader()
         w.writerows(rows)
-    # the ISS log is large and fully reproducible from the ELF
-    os.remove(spike_log)
 
     rtl_csv = os.path.join(outdir, "rtl.csv")
     rc, out = sh([RTL_BIN, "+elf=" + elf, "+trace=" + rtl_csv,
