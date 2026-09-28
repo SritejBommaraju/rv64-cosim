@@ -98,21 +98,22 @@ A regression that has never failed proves little. `scripts/mutation_check.py`
 injects realistic OoO bugs into a copy of the core and reruns a fixed set of
 programs (smoke, muldiv, and 8 hazard programs):
 
-| mutation | killed by |
-|---|---|
-| forward from a store that only partially covers the load | 8/10 |
-| forward from the oldest overlapping store, not the youngest | 8/10 |
-| loads bypass older stores with unknown addresses | yes |
-| load destinations never marked not-ready | 8/10 |
-| SRAW/SRAIW with a 6-bit shift amount | yes |
-| LHU sign-extends | all |
-| commit frees the new physical register instead of the old one | all |
-| ALU op issues on the cycle a mul/div result takes writeback port 0 | 9/10 |
-| BLTU compares signed | yes |
+| mutation | programs failing (of 10) |
+|---|---:|
+| forward from a store that only partially covers the load | 8 |
+| forward from the oldest overlapping store, not the youngest | 8 |
+| loads bypass older stores with unknown addresses | 9 |
+| load destinations never marked not-ready | 8 |
+| SRAW/SRAIW with a 6-bit shift amount | 6 |
+| LHU sign-extends | 9 |
+| commit frees the new physical register instead of the old one | 10 |
+| ALU op issues on the cycle a mul/div result takes writeback port 0 | 9 |
+| BLTU compares signed | 3 |
 
-9/9 killed. The "oldest store" mutation was caught by only 2 of 9 programs
-until the hazard programs included mul/div. The added latency is what
-separates forwarding order from program order.
+All 9 are caught. The "oldest store" mutation was caught by only 2 of 9
+programs before the hazard programs included mul/div. The added latency is
+what separates forwarding order from program order. BLTU is the weakest at
+3/10, so unsigned-compare branch operands are a stimulus gap worth widening.
 
 Removing the LSQ's same-cycle store address/commit bypass is an *equivalent*
 mutant. The ROB commits from a registered `done_q`, so a store can never issue
