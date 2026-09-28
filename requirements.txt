@@ -1,0 +1,8 @@
+# riscv-dv pygen (versions from riscv-dv/requirements.txt) + the co-sim scripts
+PyYAML
+bitstring
+tabulate
+pandas<=2.2.3
+pyvsc==0.9.1.10086043874
+pyucis==0.1.3.7162246580
+pyboolector==3.2.4.20240823.1

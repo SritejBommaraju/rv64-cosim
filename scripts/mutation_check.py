@@ -51,6 +51,10 @@ MUTATIONS = [
      ".commit_valid0(rob_commit_valid[0]), .commit_prev_prd0(rob_commit_prev_prd[0]),",
      ".commit_valid0(rob_commit_valid[0]), .commit_prev_prd0(rob_commit_prd[0]),",
      "commit frees the new physical register instead of the previous mapping"),
+    ("md_port_conflict", "rtl/ooo/ooo_core.sv",
+     "!(md_done && !tab_is_load[idx])) begin",
+     "1'b1) begin",
+     "let an ALU op issue on the cycle a mul/div result takes writeback port 0"),
     ("branch_bltu_signed", "rtl/ooo/ooo_core.sv",
      "3'h6: branch_taken = (rs1_val <  rs2_val);",
      "3'h6: branch_taken = ($signed(rs1_val) < $signed(rs2_val));",
@@ -66,12 +70,12 @@ def main():
     a = ap.parse_args()
 
     work = tempfile.mkdtemp(prefix="mutcheck_")
-    progs = [os.path.join(ROOT, "tests", "directed", "smoke.S")]
+    progs = [os.path.join(ROOT, "tests", "directed", t) for t in ("smoke.S", "muldiv.S")]
     for s in range(1, a.seeds + 1):
         for tag, opts in (("mix", []), ("tight", ["--pool", "3", "--window", "16"])):
             p = os.path.join(work, "hazard_{}_{}.S".format(tag, s))
             subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "hazard_gen.py"), p,
-                            "--seed", str(s), "--scenarios", "300"] + opts,
+                            "--seed", str(s), "--scenarios", "300", "--m-ext"] + opts,
                            check=True, stdout=subprocess.DEVNULL)
             progs.append(p)
 

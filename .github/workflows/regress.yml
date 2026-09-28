@@ -1,0 +1,85 @@
+name: cosim-regression
+
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 9 * * *"   # nightly, fresh seeds
+  workflow_dispatch:
+    inputs:
+      budget:
+        description: "minutes of random tests"
+        default: "25"
+
+env:
+  SPIKE_REV: 9c190a07c6838f6392bafa4ad83acea462c7f759   # same Spike as Chipyard 1.14
+  BUDGET: ${{ github.event.inputs.budget || '25' }}
+
+jobs:
+  regress:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install toolchain packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            verilator gcc-riscv64-unknown-elf binutils-riscv64-unknown-elf \
+            device-tree-compiler build-essential
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - run: pip install -r requirements.txt
+
+      - name: Cache Spike
+        id: spike-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/spike
+          key: spike-${{ env.SPIKE_REV }}-ubuntu-24.04
+
+      - name: Build Spike
+        if: steps.spike-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone https://github.com/riscv-software-src/riscv-isa-sim.git /tmp/spike-src
+          cd /tmp/spike-src && git checkout $SPIKE_REV
+          mkdir build && cd build
+          ../configure --prefix=$HOME/spike
+          make -j$(nproc) && make install
+
+      - run: echo "$HOME/spike/bin" >> $GITHUB_PATH
+
+      - name: Build RTL model
+        run: python3 scripts/cosim.py build
+
+      - name: Directed tests
+        run: python3 scripts/cosim.py -o out/directed run tests/directed/*.S
+
+      - name: Random regression (riscv-dv + hazard generator)
+        run: |
+          python3 scripts/cosim.py -o out/regress regress \
+            --testlist dv/testlist_ci.yaml --jobs $(nproc) \
+            --budget $BUDGET --start-seed ${{ github.run_number }}
+
+      - name: Summary
+        if: always()
+        run: python3 scripts/summarize.py out/regress/regress.json >> $GITHUB_STEP_SUMMARY || true
+
+      - name: Keep failing tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failing-tests
+          path: |
+            out/**/compare.log
+            out/**/*.S
+            out/**/*.csv
+            out/regress/regress.json
+          retention-days: 14

@@ -41,6 +41,7 @@ MARCH = "rv64im_zicsr_zifencei"
 MABI = "lp64"
 SPIKE_ISA = "rv64im_zicsr_zifencei"
 RESET_PC = 0x80000000
+KEEP_PASSING = os.environ.get("KEEP_PASSING", "0") == "1"
 
 # Options every generated test needs on this core: no traps or privilege changes
 # exist yet, so programs run bare in M-mode and avoid ecall/ebreak/wfi/dret.
@@ -202,6 +203,13 @@ def gen_and_run(test, seed, outroot):
         return {"name": name, "status": "GEN_FAIL", "detail": "see gen.log", "instrs": 0, "cycles": 0}
     res = run_program(asm, outdir)
     res.update(name=name, test=test["test"], seed=seed)
+    if res["status"] == "PASS" and not KEEP_PASSING:
+        # traces are reproducible from test.S; keep the regression output small
+        for f in ("test.elf", "spike.csv", "rtl.csv"):
+            try:
+                os.remove(os.path.join(outdir, f))
+            except OSError:
+                pass
     return res
 
 
