@@ -36,10 +36,10 @@ GCC = os.environ.get("RISCV_GCC", "riscv64-unknown-elf-gcc")
 NM = GCC.replace("gcc", "nm")
 SPIKE = os.environ.get("SPIKE", "spike")
 
-TARGET = "rv64i_ooo"
-MARCH = "rv64i_zicsr_zifencei"
+TARGET = "rv64im_ooo"
+MARCH = "rv64im_zicsr_zifencei"
 MABI = "lp64"
-SPIKE_ISA = "rv64i_zicsr_zifencei"
+SPIKE_ISA = "rv64im_zicsr_zifencei"
 RESET_PC = 0x80000000
 
 # Options every generated test needs on this core: no traps or privilege changes
@@ -177,6 +177,12 @@ def gen_opts_list(test):
 
 def generate(test, seed, outdir):
     os.makedirs(outdir, exist_ok=True)
+    if test.get("generator") == "hazard":
+        asm = os.path.join(outdir, "test.S")
+        cmd = [sys.executable, os.path.join(ROOT, "scripts", "hazard_gen.py"), asm,
+               "--seed={}".format(seed)] + (test.get("gen_opts") or "").split()
+        rc, _ = sh(cmd, os.path.join(outdir, "gen.log"), timeout=120)
+        return asm if rc == 0 else None
     install_target()
     asm_base = os.path.join(outdir, "test")
     gen_test = test.get("gen_test", "riscv_instr_base_test")
