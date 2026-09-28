@@ -1,0 +1,6 @@
+[submodule "core"]
+	path = core
+	url = https://github.com/SritejBommaraju/rv64-ooo-core.git
+[submodule "riscv-dv"]
+	path = riscv-dv
+	url = https://github.com/chipsalliance/riscv-dv.git
