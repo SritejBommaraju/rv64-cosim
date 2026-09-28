@@ -166,7 +166,10 @@ def install_target():
             os.remove(dst)
         else:
             shutil.rmtree(dst)
-    os.symlink(src, dst)
+    try:
+        os.symlink(src, dst)
+    except FileExistsError:  # another worker won the race
+        pass
 
 
 def gen_opts_list(test):
@@ -231,6 +234,7 @@ def cmd_regress(a):
     by_test = [[j for j in jobs if j[0] is t] for t in tests]
     jobs = [j for group in itertools.zip_longest(*by_test) for j in group if j]
     print("regress: {} runs across {} tests, {} jobs".format(len(jobs), len(tests), a.jobs), flush=True)
+    install_target()
     deadline = time.time() + a.budget * 60 if a.budget else None
     results = []
     with cf.ProcessPoolExecutor(max_workers=a.jobs) as ex:
