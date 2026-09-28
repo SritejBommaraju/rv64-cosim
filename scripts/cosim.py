@@ -79,7 +79,7 @@ def compile_elf(src, elf, log):
     cmd = [GCC, "-march=" + MARCH, "-mabi=" + MABI, "-static", "-mcmodel=medany",
            "-fvisibility=hidden", "-nostdlib", "-nostartfiles",
            "-T", os.path.join(ROOT, "dv", "link.ld"),
-           "-I", os.path.join(RDV, "user_extension"), "-I", os.path.join(ROOT, "tests", "directed"),
+           "-I", os.path.join(ROOT, "dv", "user_extension"), "-I", os.path.join(ROOT, "tests", "directed"),
            src, "-o", elf]
     return sh(cmd, log)[0]
 

@@ -148,6 +148,16 @@ assembly and worked around in the testlists:
   followed by `sh zero, -142(s5)`).
 - The main program length is drawn uniformly from `[10, instr_cnt]`.
 
+In the flow itself:
+
+- **Reset-state mismatch between Spike and RTL.** CI's first run on fresh
+  seeds hit 2 mismatches in 560 runs (`divu` returning the divide-by-zero
+  value, `xori` reading 0). Root cause: Spike's boot ROM leaves `a1 = 0x1020`
+  (the DTB pointer), the RTL resets every GPR to 0, and riscv-dv's `init_gpr`
+  skips the two registers it picked as `sp`/`tp`, so a program could read `a1`
+  before writing it. `dv/user_extension/user_init.s` now zeroes `x1`–`x31` at
+  `_start`.
+
 ## Limitations and next steps
 
 - No traps or interrupts yet, so tests run in bare M-mode with no
