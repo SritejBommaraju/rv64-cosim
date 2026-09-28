@@ -1,5 +1,5 @@
 """
-rv64-ooo-core target for riscv-dv pygen (M-mode only, RV64I, no traps yet).
+rv64-ooo-core target for riscv-dv pygen (M-mode only, RV64IM, no traps yet).
 Derived from riscv-dv's rv64imc target.
 
 Copyright 2020 Google LLC
@@ -37,7 +37,8 @@ supported_privileged_mode = [privileged_mode_t.MACHINE_MODE]
 unsupported_instr = []
 
 # ISA supported by the processor
-supported_isa = [riscv_instr_group_t.RV32I, riscv_instr_group_t.RV64I]
+supported_isa = [riscv_instr_group_t.RV32I, riscv_instr_group_t.RV32M,
+                 riscv_instr_group_t.RV64I, riscv_instr_group_t.RV64M]
 
 # Interrupt mode support
 supported_interrupt_mode = [mtvec_mode_t.DIRECT, mtvec_mode_t.VECTORED]

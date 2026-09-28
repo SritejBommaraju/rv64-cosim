@@ -5,7 +5,7 @@ MEM_BYTES ?= 1048576
 RESET_PC  ?= 64\'h80000000
 TRACE     ?= 0
 
-RTL = $(CORE)/rtl/alu.sv $(CORE)/rtl/decode.sv \
+RTL = $(CORE)/rtl/alu.sv $(CORE)/rtl/muldiv.sv $(CORE)/rtl/decode.sv \
       $(CORE)/rtl/rename/free_list.sv $(CORE)/rtl/rename/rename_map.sv $(CORE)/rtl/rename/rename.sv \
       $(CORE)/rtl/rename/prf.sv $(CORE)/rtl/ooo/rob.sv $(CORE)/rtl/lsq/lsq.sv \
       $(CORE)/rtl/ooo/ooo_mem.sv $(CORE)/rtl/ooo/csr.sv $(CORE)/rtl/ooo/ooo_core.sv $(CORE)/rtl/ooo/ooo_top.sv
